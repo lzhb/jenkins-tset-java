@@ -65,12 +65,18 @@ pipeline {
             steps {
                 echo 'Running tests...'
                 sh 'mvn test'
-            }
-            post {
-                always {
-                    // 发布测试结果（如果有测试）
-                    publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
-                }
+                // 显示测试结果摘要
+                sh '''
+                    echo "=== Test Results Summary ==="
+                    if [ -d "target/surefire-reports" ]; then
+                        echo "Test reports directory exists"
+                        ls -la target/surefire-reports/
+                        echo "Test result files:"
+                        find target/surefire-reports -name "*.xml" -exec basename {} \\; || echo "No XML test results found"
+                    else
+                        echo "No test reports directory found"
+                    fi
+                '''
             }
         }
         
