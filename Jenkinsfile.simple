@@ -1,0 +1,125 @@
+pipeline {
+    agent any
+    
+    environment {
+        // 使用系统Java和Maven路径（macOS Homebrew安装）
+        MAVEN_OPTS = '-Xmx1024m'
+        JAVA_HOME = '/opt/homebrew/opt/openjdk@11'
+        PATH = "/opt/homebrew/bin:/opt/homebrew/opt/openjdk@11/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
+    }
+    
+    stages {
+        stage('Environment Check') {
+            steps {
+                echo 'Checking build environment...'
+                sh '''
+                    echo "=== Environment Information ==="
+                    echo "Current PATH: $PATH"
+                    echo "JAVA_HOME: $JAVA_HOME"
+                    echo "Working Directory: $(pwd)"
+                    echo ""
+                    echo "=== Tool Versions ==="
+                    java -version
+                    mvn -version
+                '''
+            }
+        }
+        
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+        
+        stage('Clean & Compile') {
+            steps {
+                echo 'Cleaning and compiling the project...'
+                sh 'mvn clean compile'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                sh 'mvn test'
+                sh '''
+                    echo "=== Test Results ==="
+                    if [ -d "target/surefire-reports" ]; then
+                        echo "Test reports found:"
+                        ls -la target/surefire-reports/
+                    else
+                        echo "No test reports directory"
+                    fi
+                '''
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                echo 'Packaging the application...'
+                sh 'mvn package -DskipTests'
+                sh '''
+                    echo "=== Build Artifacts ==="
+                    if [ -f "target/hello-world-1.0.0.jar" ]; then
+                        echo "JAR file created successfully:"
+                        ls -la target/*.jar
+                    else
+                        echo "JAR file not found!"
+                        ls -la target/ || echo "Target directory not found"
+                    fi
+                '''
+            }
+        }
+        
+        stage('Test Application') {
+            steps {
+                echo 'Testing the packaged application...'
+                sh '''
+                    if [ -f "target/hello-world-1.0.0.jar" ]; then
+                        echo "Running application:"
+                        java -jar target/hello-world-1.0.0.jar
+                        echo "Application test completed successfully!"
+                    else
+                        echo "ERROR: JAR file not found!"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline completed!'
+            sh '''
+                echo "=== Final Build Summary ==="
+                echo "Build Number: ${BUILD_NUMBER}"
+                echo "Job Name: ${JOB_NAME}"
+                echo "Workspace: $(pwd)"
+                if [ -f "target/hello-world-1.0.0.jar" ]; then
+                    echo "✅ JAR file created: target/hello-world-1.0.0.jar"
+                    echo "File size: $(ls -lh target/hello-world-1.0.0.jar | awk '{print $5}')"
+                else
+                    echo "❌ JAR file not found"
+                fi
+            '''
+        }
+        success {
+            echo '🎉 Build succeeded!'
+        }
+        failure {
+            echo '❌ Build failed!'
+            sh '''
+                echo "=== Debug Information ==="
+                echo "Current directory contents:"
+                ls -la
+                echo "Target directory contents:"
+                ls -la target/ || echo "Target directory not found"
+                echo "Java and Maven status:"
+                which java && java -version || echo "Java not found"
+                which mvn && mvn -version || echo "Maven not found"
+            '''
+        }
+    }
+}
