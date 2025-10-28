@@ -1,0 +1,20 @@
+# Docker ignore file
+target/
+.git/
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+*.md
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.settings/
+.project
+.classpath
+jenkins.properties
+build.sh
