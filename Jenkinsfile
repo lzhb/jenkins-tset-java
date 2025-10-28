@@ -4,9 +4,10 @@ pipeline {
     environment {
         // 定义环境变量
         MAVEN_OPTS = '-Xmx1024m'
-        // 使用系统Java路径（macOS Homebrew安装的Java）
+        // 使用系统Java和Maven路径（macOS Homebrew安装）
         JAVA_HOME = '/opt/homebrew/opt/openjdk@11'
-        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+        // 确保包含所有必要的路径
+        PATH = "/opt/homebrew/bin:/opt/homebrew/opt/openjdk@11/bin:/usr/local/bin:/usr/bin:/bin:${env.PATH}"
     }
     
     stages {
@@ -14,6 +15,26 @@ pipeline {
             steps {
                 echo 'Checking out source code...'
                 checkout scm
+            }
+        }
+        
+        stage('Environment Check') {
+            steps {
+                echo 'Checking build environment...'
+                sh '''
+                    echo "=== Environment Information ==="
+                    echo "Current PATH: $PATH"
+                    echo "JAVA_HOME: $JAVA_HOME"
+                    echo "Working Directory: $(pwd)"
+                    echo ""
+                    echo "=== Tool Locations ==="
+                    which java || echo "Java not found in PATH"
+                    which mvn || echo "Maven not found in PATH"
+                    echo ""
+                    echo "=== Homebrew Locations ==="
+                    ls -la /opt/homebrew/bin/mvn || echo "Maven not found in /opt/homebrew/bin/"
+                    ls -la /opt/homebrew/bin/java || echo "Java not found in /opt/homebrew/bin/"
+                '''
             }
         }
         
