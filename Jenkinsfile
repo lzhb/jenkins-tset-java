@@ -1,15 +1,12 @@
 pipeline {
     agent any
     
-    tools {
-        maven 'Maven-3.9.0' // 确保Jenkins中配置了Maven工具
-        jdk 'JDK-11'        // 确保Jenkins中配置了JDK 11
-    }
-    
     environment {
         // 定义环境变量
         MAVEN_OPTS = '-Xmx1024m'
-        JAVA_HOME = tool('JDK-11')
+        // 使用系统Java路径（macOS Homebrew安装的Java）
+        JAVA_HOME = '/opt/homebrew/opt/openjdk@11'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
     }
     
     stages {

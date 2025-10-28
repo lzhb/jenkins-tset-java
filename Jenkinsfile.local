@@ -1,0 +1,146 @@
+pipeline {
+    agent any
+    
+    environment {
+        // 使用系统环境变量
+        MAVEN_OPTS = '-Xmx1024m'
+    }
+    
+    stages {
+        stage('Environment Check') {
+            steps {
+                echo 'Checking build environment...'
+                sh '''
+                    echo "=== Environment Information ==="
+                    echo "Java Version:"
+                    java -version || echo "Java not found in PATH"
+                    echo "Maven Version:"
+                    mvn -version || echo "Maven not found in PATH"
+                    echo "Current PATH: $PATH"
+                    echo "Working Directory: $(pwd)"
+                '''
+            }
+        }
+        
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+        
+        stage('Build Info') {
+            steps {
+                echo "Building ${env.JOB_NAME} - ${env.BUILD_NUMBER}"
+                echo "Branch: ${env.BRANCH_NAME ?: 'main'}"
+            }
+        }
+        
+        stage('Clean') {
+            steps {
+                echo 'Cleaning previous builds...'
+                sh '''
+                    export PATH="/opt/homebrew/bin:/opt/homebrew/opt/openjdk@11/bin:$PATH"
+                    mvn clean
+                '''
+            }
+        }
+        
+        stage('Compile') {
+            steps {
+                echo 'Compiling the project...'
+                sh '''
+                    export PATH="/opt/homebrew/bin:/opt/homebrew/opt/openjdk@11/bin:$PATH"
+                    mvn compile
+                '''
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                sh '''
+                    export PATH="/opt/homebrew/bin:/opt/homebrew/opt/openjdk@11/bin:$PATH"
+                    mvn test
+                '''
+            }
+            post {
+                always {
+                    // 发布测试结果（如果存在）
+                    script {
+                        if (fileExists('target/surefire-reports/*.xml')) {
+                            publishTestResults testResultsPattern: 'target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                echo 'Packaging the application...'
+                sh '''
+                    export PATH="/opt/homebrew/bin:/opt/homebrew/opt/openjdk@11/bin:$PATH"
+                    mvn package -DskipTests
+                '''
+            }
+        }
+        
+        stage('Archive Artifacts') {
+            steps {
+                echo 'Archiving artifacts...'
+                script {
+                    if (fileExists('target/*.jar')) {
+                        archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                        archiveArtifacts artifacts: 'pom.xml', fingerprint: true
+                    } else {
+                        echo 'No JAR files found to archive'
+                    }
+                }
+            }
+        }
+        
+        stage('Run Application') {
+            steps {
+                echo 'Testing the packaged application...'
+                sh '''
+                    export PATH="/opt/homebrew/bin:/opt/homebrew/opt/openjdk@11/bin:$PATH"
+                    if [ -f "target/hello-world-1.0.0.jar" ]; then
+                        java -jar target/hello-world-1.0.0.jar
+                    else
+                        echo "JAR file not found!"
+                        ls -la target/ || echo "Target directory not found"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline completed!'
+            // 清理工作空间（可选）
+            // cleanWs()
+        }
+        success {
+            echo 'Build succeeded! ✅'
+        }
+        failure {
+            echo 'Build failed! ❌'
+            // 显示更多调试信息
+            sh '''
+                echo "=== Debug Information ==="
+                echo "Current directory contents:"
+                ls -la
+                echo "Target directory contents:"
+                ls -la target/ || echo "Target directory not found"
+                echo "Environment variables:"
+                env | grep -E "(JAVA|MAVEN|PATH)" || echo "No relevant env vars found"
+            '''
+        }
+        unstable {
+            echo 'Build is unstable! ⚠️'
+        }
+    }
+}
