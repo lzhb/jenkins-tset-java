@@ -1,6 +1,6 @@
-# Java Hello World Project
+# Java Hello World HTTP Server
 
-这是一个简单的Java Hello World项目，使用Maven构建，支持Jenkins CI/CD流水线。
+这是一个简单的Java HTTP服务器项目，监听9000端口并返回"Hello World"响应。使用Maven构建，支持Jenkins CI/CD流水线。
 
 ## 项目结构
 
@@ -94,11 +94,36 @@ docker build -t hello-world-java .
 docker run hello-world-java
 ```
 
-## 输出
-程序运行后会输出：
+## HTTP服务功能
+
+### 启动服务器
+```bash
+# 运行JAR文件启动HTTP服务器
+java -jar target/hello-world-1.0.0.jar
 ```
-Hello, World!
-This is a simple Java Hello World project.
+
+### 服务器信息
+- **端口**: 9000
+- **根路径**: `/`
+- **响应**: `Hello World`
+- **访问地址**: http://localhost:9000
+
+### 测试服务器
+```bash
+# 使用curl测试
+curl http://localhost:9000/
+
+# 或在浏览器中访问
+open http://localhost:9000
+```
+
+### 服务器输出
+程序启动后会显示：
+```
+🚀 Hello World HTTP Server started!
+📡 Listening on http://localhost:9000
+🌐 Try: curl http://localhost:9000
+⏹️  Press Ctrl+C to stop the server
 ```
 
 ## 测试

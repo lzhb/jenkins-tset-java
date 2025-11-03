@@ -1,47 +1,47 @@
 package com.example;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.*;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 
 /**
- * Unit tests for HelloWorld class
+ * Unit tests for HelloWorld HTTP Server
  */
 public class HelloWorldTest {
     
-    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-    private final PrintStream originalOut = System.out;
-    
-    @BeforeEach
-    public void setUpStreams() {
-        System.setOut(new PrintStream(outContent));
-    }
-    
-    @AfterEach
-    public void restoreStreams() {
-        System.setOut(originalOut);
-    }
-    
     @Test
-    public void testMainMethod() {
-        // 测试main方法的输出
-        String[] args = {};
-        HelloWorld.main(args);
-        
-        String output = outContent.toString();
-        assertTrue(output.contains("Hello, World!"), "Output should contain 'Hello, World!'");
-        assertTrue(output.contains("This is a simple Java Hello World project."), 
-                  "Output should contain project description");
-    }
-    
-    @Test
-    public void testMainMethodNotNull() {
-        // 测试main方法不会抛出异常
+    public void testHandlerClass() {
+        // 测试Handler类存在且可以实例化
         assertDoesNotThrow(() -> {
-            HelloWorld.main(new String[]{});
+            HelloWorld.HelloWorldHandler handler = new HelloWorld.HelloWorldHandler();
+            assertNotNull(handler, "Handler should be instantiable");
         });
+    }
+    
+    @Test
+    public void testMainMethodExists() {
+        // 测试main方法存在且不会立即抛出异常
+        assertDoesNotThrow(() -> {
+            // 只验证方法存在，不实际运行服务器
+            HelloWorld.class.getMethod("main", String[].class);
+        });
+    }
+    
+    @Test
+    public void testConstants() {
+        // 测试常量值（通过反射）
+        try {
+            java.lang.reflect.Field portField = HelloWorld.class.getDeclaredField("PORT");
+            portField.setAccessible(true);
+            int port = (int) portField.get(null);
+            assertEquals(9000, port, "Port should be 9000");
+            
+            java.lang.reflect.Field messageField = HelloWorld.class.getDeclaredField("RESPONSE_MESSAGE");
+            messageField.setAccessible(true);
+            String message = (String) messageField.get(null);
+            assertEquals("Hello World", message, "Response message should be 'Hello World'");
+            
+        } catch (Exception e) {
+            fail("Failed to access constants: " + e.getMessage());
+        }
     }
 }

@@ -95,10 +95,56 @@ pipeline {
             }
         }
         
-        stage('Run Application') {
+        stage('Test HTTP Server') {
             steps {
-                echo 'Testing the packaged application...'
-                sh 'java -jar target/hello-world-1.0.0.jar'
+                echo 'Testing the HTTP server application...'
+                sh '''
+                    echo "=== Testing JAR File ==="
+                    if [ -f "target/hello-world-1.0.0.jar" ]; then
+                        echo "✅ JAR file found: target/hello-world-1.0.0.jar"
+                        echo "File size: $(ls -lh target/hello-world-1.0.0.jar | awk '{print $5}')"
+                        
+                        echo ""
+                        echo "=== Starting HTTP Server Test ==="
+                        # 启动服务器（后台运行）
+                        java -jar target/hello-world-1.0.0.jar &
+                        SERVER_PID=$!
+                        echo "Server started with PID: $SERVER_PID"
+                        
+                        # 等待服务器启动
+                        echo "Waiting for server to start..."
+                        sleep 5
+                        
+                        # 测试HTTP响应
+                        echo "Testing HTTP endpoint..."
+                        if curl -f -s http://localhost:9000/ > /tmp/response.txt; then
+                            RESPONSE=$(cat /tmp/response.txt)
+                            echo "✅ HTTP Response: '$RESPONSE'"
+                            if [ "$RESPONSE" = "Hello World" ]; then
+                                echo "✅ Server test passed!"
+                            else
+                                echo "❌ Unexpected response: '$RESPONSE'"
+                                kill $SERVER_PID 2>/dev/null || true
+                                exit 1
+                            fi
+                        else
+                            echo "❌ Failed to connect to server"
+                            kill $SERVER_PID 2>/dev/null || true
+                            exit 1
+                        fi
+                        
+                        # 停止服务器
+                        echo "Stopping server..."
+                        kill $SERVER_PID 2>/dev/null || true
+                        sleep 2
+                        echo "✅ Server test completed successfully!"
+                        
+                    else
+                        echo "❌ JAR file not found!"
+                        ls -la target/ || echo "Target directory not found"
+                        exit 1
+                    fi
+                '''
             }
         }
     }
